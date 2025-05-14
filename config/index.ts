@@ -62,6 +62,7 @@ export const allowedOrigins: string[] = [
   'http://localhost:8080',
   'http://0.0.0.0:8080',
   'http://localhost:1234',
+  'https://editor-ten-eta.vercel.app'
 ];
 
 /**

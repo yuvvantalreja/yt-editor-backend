@@ -32,16 +32,19 @@ class App {
    */
   constructor() {
     this.app = express();
-    this.redisClient = redis.createClient(
-      redisConfiguration.REDIS_PORT,
-      redisConfiguration.REDIS_HOST
-    );
-    if (redisConfiguration.REDIS_PASSWORD) {
-      this.redisClient.auth(redisConfiguration.REDIS_PASSWORD, error => {
-        console.error(error);
-      });
-    }
-    this.redisStore = connectRedis(session);
+
+    // Comment out Redis client initialization for testing
+    // this.redisClient = redis.createClient(
+    //   redisConfiguration.REDIS_PORT,
+    //   redisConfiguration.REDIS_HOST
+    // );
+    // if (redisConfiguration.REDIS_PASSWORD) {
+    //   this.redisClient.auth(redisConfiguration.REDIS_PASSWORD, error => {
+    //     console.error(error);
+    //   });
+    // }
+    // this.redisStore = connectRedis(session);
+
     this.initializeMiddleWares();
     this.initializeControllers([
       new AuthController(),
@@ -55,19 +58,20 @@ class App {
    */
   private initializeMiddleWares() {
     // Configuration for creating session cookies.
-    const redisStore = this.redisStore;
+    // const redisStore = this.redisStore;
     this.app.use(
       session({
         name: 'vega_session',
         secret: sessionSecret,
         resave: false,
         saveUninitialized: false,
-        store: new redisStore({
-          host: redisConfiguration.REDIS_HOST,
-          port: redisConfiguration.REDIS_PORT,
-          client: this.redisClient,
-          ttl: cookieExpiry,
-        }),
+        // Use in-memory store instead of Redis
+        // store: new redisStore({
+        //   host: redisConfiguration.REDIS_HOST,
+        //   port: redisConfiguration.REDIS_PORT,
+        //   client: this.redisClient,
+        //   ttl: cookieExpiry,
+        // }),
         /**
          * `cookieExpiry` is converted to milliseconds. Reference:
          * https://www.npmjs.com/package/express-session#cookiemaxage

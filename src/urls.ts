@@ -53,8 +53,8 @@ const redirectUrl = {
 let hostUrl = '';
 if (nodeEnv === 'production') {
   // hardcode url here
-  redirectUrl.successful = 'https://vega.github.io/editor';
-  hostUrl = 'https://vega-editor-backend.vercel.app';
+  redirectUrl.successful = 'https://editor-ten-eta.vercel.app/';
+  hostUrl = 'https://editor-backend-orpin.vercel.app';
 } else {
   // Default for development - explicitly set host URL for local development
   redirectUrl.successful = 'http://localhost:1234';
