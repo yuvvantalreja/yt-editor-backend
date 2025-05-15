@@ -8,8 +8,6 @@ import { redirectUrl, authUrl } from '../urls';
 // Enables passport to recognize the configuration.
 require('../../config/passport');
 
-// We can't use an in-memory store for Vercel serverless functions as they're stateless
-// Instead, we'll encode the user info in the token itself
 
 /**
  * Controller for OAuthentication via GitHub.
@@ -52,7 +50,6 @@ class AuthController implements BaseController {
   private handleOptions = (req, res) => {
     const origin = req.headers.origin || '*';
 
-    // Allow null origin specifically for Safari
     if (origin === 'null') {
       res.header('Access-Control-Allow-Origin', 'null');
     } else {
@@ -71,30 +68,27 @@ class AuthController implements BaseController {
    * @returns {string} A secure token
    */
   private generateToken = (user: any): string => {
-    // Create a simple token with encoded user info
+
     if (!user || !user._json) return '';
 
-    // Create a unique identifier
     const randomPart = crypto.randomBytes(16).toString('hex');
 
-    // Simple encoding - in production use JWT or better encryption
+    // Simple encoding, can use JWT or better encryption
     const userInfo = {
       id: user._json.id,
       login: user._json.login,
       name: user._json.name,
       avatar_url: user._json.avatar_url,
-      randomId: randomPart, // Add randomness to prevent token reuse
+      randomId: randomPart,
       timestamp: Date.now()
     };
 
-    // Create a signature to verify token integrity
     const dataString = JSON.stringify(userInfo);
     const signature = crypto
       .createHmac('sha256', process.env.SESSION_SECRET || 'vega-editor-secret')
       .update(dataString)
       .digest('hex');
 
-    // Combine data and signature
     const token = Buffer.from(JSON.stringify({
       data: dataString,
       signature
@@ -112,11 +106,11 @@ class AuthController implements BaseController {
     if (!token) return null;
 
     try {
-      // Decode token
+
       const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
       const { data, signature } = decoded;
 
-      // Verify signature
+
       const expectedSignature = crypto
         .createHmac('sha256', process.env.SESSION_SECRET || 'vega-editor-secret')
         .update(data)
@@ -127,12 +121,10 @@ class AuthController implements BaseController {
         return null;
       }
 
-      // Parse user data
       const userInfo = JSON.parse(data);
 
-      // Check token expiration (optional)
       const tokenAge = Date.now() - userInfo.timestamp;
-      if (tokenAge > 7 * 24 * 60 * 60 * 1000) { // 7 days
+      if (tokenAge > 7 * 24 * 60 * 60 * 1000) {
         console.error('Token expired');
         return null;
       }
@@ -157,7 +149,6 @@ class AuthController implements BaseController {
    * @param {Response} res Response object
    */
   private success = (req, res) => {
-    // Generate token for localStorage auth (for Safari users)
     let authToken = '';
     if (req.user) {
       authToken = this.generateToken(req.user);
@@ -166,7 +157,7 @@ class AuthController implements BaseController {
     res.send(
       `<html>
         <script>
-          // Store token in localStorage for Safari users
+
           const authToken = "${authToken}";
           if (authToken) {
             localStorage.setItem('vega_editor_auth_token', authToken);
@@ -182,7 +173,6 @@ class AuthController implements BaseController {
               )
               window.close()
             } catch (e) {
-              // If postMessage fails, redirect to the main page
               window.location = '${redirectUrl.successful}'
             }
           }
@@ -198,7 +188,7 @@ class AuthController implements BaseController {
    * @param {Response} res Response object
    */
   private logout = (req, res) => {
-    // Handle CORS for Safari with null origin
+
     const origin = req.headers.origin || '*';
     if (origin === 'null') {
       res.header('Access-Control-Allow-Origin', 'null');
@@ -207,12 +197,10 @@ class AuthController implements BaseController {
     }
     res.header('Access-Control-Allow-Credentials', 'true');
 
-    // Check for token in query parameter (for Safari iframe approach)
     if (req.query.token) {
       const token = req.query.token as string;
       console.log('Logging out with token from query parameter');
 
-      // No need to do anything else for stateless tokens
       return res.status(204).send();
     }
 
@@ -259,7 +247,7 @@ class AuthController implements BaseController {
    * @param {Response} res Response object
    */
   private loggedIn = (req, res) => {
-    // Set explicit CORS headers - handle null origin for Safari
+
     const origin = req.headers.origin || '*';
     if (origin === 'null') {
       res.header('Access-Control-Allow-Origin', 'null');
@@ -278,7 +266,7 @@ class AuthController implements BaseController {
       authToken: ''
     };
 
-    // Check for token-based authentication
+    // Checking for token-based auth
     const authToken = req.headers['x-auth-token'] as string;
     if (authToken) {
       console.log('Received auth token:', authToken.substring(0, 10) + '...');
@@ -290,27 +278,20 @@ class AuthController implements BaseController {
           isAuthenticated: true,
           name: tokenUser._json.name,
           profilePicUrl: tokenUser._json.avatar_url,
-          authToken // Return the same token
+          authToken
         });
       } else {
         console.log('Token validation failed');
       }
     }
 
-    // Regular session-based authentication
     if (req.user === undefined) {
-      // If the user is not authenticated via session, generate a fresh token
-      // This is the behavior we're seeing when directly accessing the endpoint
-      const freshToken = crypto.randomBytes(32).toString('hex');
       res.send({
         ...data,
-        isAuthenticated: false,
-        authToken: freshToken  // This is why the token keeps changing on reload
+        isAuthenticated: false
       });
     } else {
-      // Generate token for localStorage auth (for Safari users)
       const token = this.generateToken(req.user);
-
       res.send({
         ...data,
         handle: req.user._json.login,

@@ -91,7 +91,7 @@ class App {
 
     const corsOptions = {
       origin: (origin, callback) => {
-        // Origin can be 'null' in some cases for Safari 
+
         if (!origin || origin === 'null' || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
@@ -111,7 +111,6 @@ class App {
     this.app.options('*', (req, res) => {
       const origin = req.headers.origin || '*';
 
-      // Allow null origin specifically for Safari
       if (origin === 'null') {
         res.header('Access-Control-Allow-Origin', 'null');
       } else {
