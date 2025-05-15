@@ -32,16 +32,19 @@ class App {
    */
   constructor() {
     this.app = express();
-    this.redisClient = redis.createClient(
-      redisConfiguration.REDIS_PORT,
-      redisConfiguration.REDIS_HOST
-    );
-    if (redisConfiguration.REDIS_PASSWORD) {
-      this.redisClient.auth(redisConfiguration.REDIS_PASSWORD, error => {
-        console.error(error);
-      });
-    }
-    this.redisStore = connectRedis(session);
+
+    // Comment out Redis client initialization for testing
+    // this.redisClient = redis.createClient(
+    //   redisConfiguration.REDIS_PORT,
+    //   redisConfiguration.REDIS_HOST
+    // );
+    // if (redisConfiguration.REDIS_PASSWORD) {
+    //   this.redisClient.auth(redisConfiguration.REDIS_PASSWORD, error => {
+    //     console.error(error);
+    //   });
+    // }
+    // this.redisStore = connectRedis(session);
+
     this.initializeMiddleWares();
     this.initializeControllers([
       new AuthController(),
@@ -55,19 +58,20 @@ class App {
    */
   private initializeMiddleWares() {
     // Configuration for creating session cookies.
-    const redisStore = this.redisStore;
+    // const redisStore = this.redisStore;
     this.app.use(
       session({
         name: 'vega_session',
         secret: sessionSecret,
         resave: false,
         saveUninitialized: false,
-        store: new redisStore({
-          host: redisConfiguration.REDIS_HOST,
-          port: redisConfiguration.REDIS_PORT,
-          client: this.redisClient,
-          ttl: cookieExpiry,
-        }),
+        // Use in-memory store instead of Redis
+        // store: new redisStore({
+        //   host: redisConfiguration.REDIS_HOST,
+        //   port: redisConfiguration.REDIS_PORT,
+        //   client: this.redisClient,
+        //   ttl: cookieExpiry,
+        // }),
         /**
          * `cookieExpiry` is converted to milliseconds. Reference:
          * https://www.npmjs.com/package/express-session#cookiemaxage
@@ -75,7 +79,10 @@ class App {
         cookie: {
           maxAge: cookieExpiry * 1000,
           secure: process.env.NODE_ENV === 'production',
-          sameSite: 'none',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          domain: undefined,
+          path: '/',
+          httpOnly: true
         },
         rolling: true,
       })
@@ -84,17 +91,38 @@ class App {
 
     const corsOptions = {
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+
+        if (!origin || origin === 'null' || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
           callback(new Error('Not allowed by CORS'));
         }
       },
       credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token', 'Cache-Control', 'Pragma', 'Expires'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      exposedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token']
     };
     this.app.use(cors(corsOptions));
     this.app.use(passport.initialize());
     this.app.use(passport.session());
+
+    // Handle preflight OPTIONS requests explicitly
+    this.app.options('*', (req, res) => {
+      const origin = req.headers.origin || '*';
+
+      if (origin === 'null') {
+        res.header('Access-Control-Allow-Origin', 'null');
+      } else {
+        res.header('Access-Control-Allow-Origin', origin);
+      }
+
+      res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Auth-Token, Cache-Control, Pragma, Expires');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Expose-Headers', 'Content-Type, Authorization, X-Auth-Token');
+      res.status(200).end();
+    });
 
     // Put IP of https://vega.github.io/editor instead of 1
     this.app.set('trust proxy', 1);

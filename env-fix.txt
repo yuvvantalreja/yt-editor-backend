@@ -1,0 +1,12 @@
+# GitHub OAuth app credentials
+GITHUB_CLIENT_ID=Ov23ligNzoBsV2D4Hi5q
+GITHUB_CLIENT_SECRET=9f288b15ca882e3ebf6a5c1298d694470123a94d
+
+# Session ID configuration
+SESSION_SECRET=e16b6adcbb39d968f167d33c4851a619b572b6456bfe04484e203c2156fd4e00
+
+# Redis session store configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+NODE_ENV=production 
