@@ -4,9 +4,6 @@
     "vega-editor-backend-staging"
   ],
   "env": {
-    "REDIS_HOST": "${REDIS_HOST}",
-    "REDIS_PASSWORD": "${REDIS_PASSWORD}",
-    "REDIS_PORT": "${REDIS_PORT}",
     "SESSION_SECRET": "${SESSION_SECRET}",
     "NODE_ENV": "production"
   },
