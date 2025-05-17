@@ -132,7 +132,9 @@ class AuthController implements BaseController {
           login: userInfo.login,
           name: userInfo.name,
           avatar_url: userInfo.avatar_url
-        }
+        },
+        username: userInfo.login,
+        accessToken: userInfo.access_token
       };
     } catch (error) {
       console.error('Token validation error:', error);
@@ -149,10 +151,12 @@ class AuthController implements BaseController {
     console.log('Authentication successful, generating token');
 
     let authToken = '';
+    let githubAccessToken = '';
     try {
       if (req.user) {
         console.log('User profile received:', req.user._json ? req.user._json.login : 'Unknown');
         authToken = this.generateToken(req.user);
+        githubAccessToken = req.user.accessToken;
         console.log('Token generated successfully');
       } else {
         console.error('No user data received from GitHub authentication');
@@ -165,9 +169,12 @@ class AuthController implements BaseController {
       `<html>
         <script>
           const authToken = "${authToken}";
+          const githubAccessToken = "${githubAccessToken}"; // Pass GitHub access token to frontend
+          
           if (authToken) {
             console.log("Storing auth token in localStorage");
             localStorage.setItem('vega_editor_auth_token', authToken);
+            localStorage.setItem('vega_editor_github_token', githubAccessToken);
           } else {
             console.error("No auth token received");
           }
@@ -178,7 +185,7 @@ class AuthController implements BaseController {
           else {
             try {
               window.opener.postMessage(
-                {type: 'auth', token: authToken}, '*'
+                {type: 'auth', token: authToken, githubToken: githubAccessToken}, '*'
               )
               window.close()
             } catch (e) {
@@ -215,7 +222,6 @@ class AuthController implements BaseController {
     res.send(
       `<html>
         <script>
-          // Clear token from localStorage
           localStorage.removeItem('vega_editor_auth_token');
           
           if (window.opener === null) {
@@ -228,7 +234,6 @@ class AuthController implements BaseController {
               )
               window.close()
             } catch (e) {
-              // If postMessage fails, redirect to the main page
               window.location.assign('${redirectUrl.successful}')
             }
           }
@@ -274,7 +279,8 @@ class AuthController implements BaseController {
           isAuthenticated: true,
           name: tokenUser._json.name,
           profilePicUrl: tokenUser._json.avatar_url,
-          authToken
+          authToken,
+          githubAccessToken: tokenUser.accessToken
         });
       } else {
         console.log('Token validation failed');
