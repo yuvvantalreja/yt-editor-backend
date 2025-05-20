@@ -45,6 +45,9 @@ class App {
         }
       },
       credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token', 'Cache-Control', 'Pragma', 'Expires'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      exposedHeaders: ['Content-Type', 'Authorization', 'X-Auth-Token']
     };
     this.app.use(cors(corsOptions));
     this.app.use(passport.initialize());

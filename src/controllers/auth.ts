@@ -1,5 +1,6 @@
 import express from 'express';
 import passport from 'passport';
+import crypto from 'crypto';
 
 import BaseController from './base';
 import { redirectUrl, authUrl } from '../urls';
@@ -29,6 +30,7 @@ class AuthController implements BaseController {
    * Initialization of routes of `AuthController`.
    */
   private initializeRoutes = () => {
+    this.router.options("*", this.handleOptions);
     this.router.get(
       this.path,
       passport.authenticate('github', { scope: 'gist', session: false })
