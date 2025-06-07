@@ -41,6 +41,7 @@ class AuthController implements BaseController {
     );
     this.router.get(authUrl.logout, this.logout);
     this.router.get(authUrl.isAuthenticated, this.loggedIn);
+    this.router.get(authUrl.getGithubToken, this.getGithubToken);
   };
 
   /**
@@ -169,12 +170,11 @@ class AuthController implements BaseController {
       `<html>
         <script>
           const authToken = "${authToken}";
-          const githubAccessToken = "${githubAccessToken}"; // Pass GitHub access token to frontend
           
           if (authToken) {
             console.log("Storing auth token in localStorage");
             localStorage.setItem('vega_editor_auth_token', authToken);
-            localStorage.setItem('vega_editor_github_token', githubAccessToken);
+            // No longer storing GitHub token in localStorage for security
           } else {
             console.error("No auth token received");
           }
@@ -185,7 +185,7 @@ class AuthController implements BaseController {
           else {
             try {
               window.opener.postMessage(
-                {type: 'auth', token: authToken, githubToken: githubAccessToken}, '*'
+                {type: 'auth', token: authToken}, '*'
               )
               window.close()
             } catch (e) {
@@ -277,6 +277,44 @@ class AuthController implements BaseController {
       profilePicUrl: user._json.avatar_url,
       authToken: tokenUser ? authToken : this.generateToken(user),
       githubAccessToken: tokenUser.accessToken
+    });
+  };
+
+  /**
+   * Provides the GitHub access token for the authenticated user.
+   * This endpoint should only be called when needed for GitHub API calls.
+   *
+   * @param {Request} req Request object
+   * @param {Response} res Response object
+   */
+  private getGithubToken = (req, res) => {
+    const origin = req.headers.origin || '*';
+    if (origin === 'null') {
+      res.header('Access-Control-Allow-Origin', 'null');
+    } else {
+      res.header('Access-Control-Allow-Origin', origin);
+    }
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-Auth-Token');
+    res.header('Access-Control-Allow-Credentials', 'true');
+
+    // Checking for token-based auth
+    const authToken = req.headers['x-auth-token'] as string;
+    let tokenUser = null;
+
+    if (authToken) {
+      tokenUser = this.validateToken(authToken);
+    }
+
+    if (!req.isAuthenticated() && !tokenUser) {
+      return res.status(401).send({
+        error: 'Not authenticated'
+      });
+    }
+
+    const user = tokenUser || req.user;
+
+    res.send({
+      githubAccessToken: user.accessToken
     });
   };
 }
